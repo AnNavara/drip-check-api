@@ -1,7 +1,6 @@
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
-const axios = require('axios');
 const CharacterService = require(path.join(
     __dirname,
     './services/Character.service'
@@ -10,20 +9,11 @@ const CharacterService = require(path.join(
 const app = express();
 app.use(cors());
 
-app.get('/', async (request, response) => {
-    const res = await axios
-        .get('https://www.pathofexile.com/character-window/get-characters', {
-            withCredentials: true,
-            credentials: 'include',
-            headers: {
-                Connection: 'keep-alive',
-                'Access-Control-Allow-Origin': '*',
-                // 'User-Agent': 'PostmanRuntime/7.29.0',
-                'User-Agent': 'DripCheckApi/0.0.1',
-            },
-            params: { accountName: 'dtnhdantalian', realm: 'pc' },
-        })
+app.get('/account', async (request, response) => {
+    const { accountName, realm } = request.query;
+    CharacterService.getAll(accountName, realm)
         .then((data) => {
+            data.data;
             response.send(data.data);
         })
         .catch((error) => {
@@ -31,21 +21,22 @@ app.get('/', async (request, response) => {
                 console.log(error.response.data);
                 console.log(error.response.status);
                 console.log(error.response.headers);
-                res.status(500).send('Internal server error');
             } else if (error.request) {
                 console.log(error.request);
             } else {
                 console.log('Error', error.message);
             }
+            response.status(500).send(error);
         });
 });
 
-app.get('/characters', async (request, response) => {
-    const { accountName, realm } = request.query;
-    CharacterService.getAll(accountName, realm)
-        .then((data) => {
-            data.data;
-            response.send(data.data);
+app.get('/character', async (request, response) => {
+    const { accountName, realm, characterName } = request.query;
+    CharacterService.getOne(accountName, realm, characterName)
+        .then(({ items, passives }) => {
+            const data = items.data;
+            data.passives = passives.data;
+            response.send(data);
         })
         .catch((error) => {
             if (error.response) {
